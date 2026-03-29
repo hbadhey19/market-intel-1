@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Market Intelligence Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f4f0;color:#1a1a18;min-height:100vh;padding:20px}
+.page{max-width:1100px;margin:0 auto}
+.setup-banner{background:#e6f1fb;border:1px solid #85b7eb;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.setup-banner.hidden{display:none}
+.setup-label{font-size:13px;color:#0c447c;font-weight:700;margin-bottom:6px}
+.setup-input{width:100%;max-width:380px;padding:8px 12px;border:1px solid #85b7eb;border-radius:8px;font-size:13px;background:#fff;color:#1a1a18;outline:none;display:block;margin:6px 0}
+.setup-input:focus{border-color:#185fa5;box-shadow:0 0 0 2px rgba(24,95,165,.15)}
+.setup-btn{padding:8px 20px;background:#185fa5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+.setup-btn:hover{background:#0c447c}
+.setup-hint{font-size:11px;color:#378add;margin-top:6px}
+.setup-hint a{color:#185fa5;text-decoration:none}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #d3d1c7;flex-wrap:wrap;gap:10px}
+.title{font-size:20px;font-weight:700}
+.sub{font-size:12px;color:#888780;margin-top:3px}
+.hdr-right{text-align:right;font-size:11px;color:#888780;line-height:1.7}
+.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#3b6d11;margin-right:4px;animation:pulse 2s infinite}
+.live-dot.err{background:#a32d2d;animation:none}
+.live-dot.loading{background:#854f0b;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.status-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:8px 14px;background:#fff;border:1px solid #d3d1c7;border-radius:8px;flex-wrap:wrap}
+.si{font-size:12px;color:#888780}
+.si.ok{color:#3b6d11}.si.err{color:#a32d2d}.si.loading{color:#854f0b}
+.refresh-btn{margin-left:auto;padding:5px 14px;border:1px solid #d3d1c7;border-radius:6px;font-size:12px;cursor:pointer;background:#fff}
+.refresh-btn:hover{background:#f1efe8}
+.tab-bar{display:flex;gap:4px;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:7px 16px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#5f5e5a;transition:all .15s;user-select:none}
+.tab.active{background:#1a1a18;color:#fff;border-color:#1a1a18}
+.tab:hover:not(.active){background:#f1efe8}
+.panel{display:none}.panel.active{display:block}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.kpi{background:#fff;border-radius:12px;padding:14px 16px;border:1px solid #d3d1c7}
+.kpi-lbl{font-size:10px;color:#888780;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.kpi-val{font-size:22px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.kpi-d{font-size:12px;margin-top:4px}
+.kpi-sub{font-size:11px;color:#5f5e5a;margin-top:3px;line-height:1.4}
+.kpi-src{font-size:10px;color:#b4b2a9;margin-top:5px}
+.red{color:#a32d2d}.amber{color:#854f0b}.green{color:#3b6d11}.blue{color:#185fa5}.gray{color:#888780}
+.sec-title{font-size:11px;font-weight:600;color:#5f5e5a;text-transform:uppercase;letter-spacing:.07em;margin:20px 0 10px;padding-bottom:5px;border-bottom:1px solid #d3d1c7}
+.gr{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+.gn{font-size:13px;color:#1a1a18;min-width:200px;line-height:1.3}
+.gt{flex:1;height:10px;background:#e8e6e0;border-radius:5px;overflow:hidden}
+.gf{height:100%;border-radius:5px;transition:width .6s}
+.gv{font-size:12px;color:#5f5e5a;min-width:140px;text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.bg{background:#eaf3de;color:#27500a}.ba{background:#faeeda;color:#633806}.br{background:#fcebeb;color:#791f1f}.bb-b{background:#e6f1fb;color:#0c447c}
+.sr{display:flex;gap:10px;padding:10px 13px;border-radius:8px;margin-bottom:8px;background:#f1efe8;border:1px solid #d3d1c7;align-items:flex-start}
+.sd{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.sd.r{background:#a32d2d}.sd.a{background:#854f0b}.sd.g{background:#3b6d11}
+.st{font-size:13px;color:#1a1a18;font-weight:600;line-height:1.4}
+.sb{font-size:12px;color:#5f5e5a;line-height:1.55;margin-top:3px}
+.cl{border-radius:8px;padding:12px 15px;font-size:13px;line-height:1.65;margin:12px 0}
+.cl-a{background:#faeeda;color:#633806;border:1px solid #ef9f27}
+.cl-b{background:#e6f1fb;color:#0c447c;border:1px solid #85b7eb}
+.cl-r{background:#fcebeb;color:#791f1f;border:1px solid #f09595}
+.cl-g{background:#eaf3de;color:#27500a;border:1px solid #97c459}
+.gex-map{background:#f1efe8;border:1px solid #d3d1c7;border-radius:12px;padding:16px 18px;margin:14px 0}
+.gex-track{position:relative;height:48px;margin:0 10px 34px}
+.gex-line{position:absolute;left:0;right:0;top:50%;height:2px;background:#d3d1c7;transform:translateY(-50%)}
+.gex-zone{position:absolute;left:0;width:60%;top:0;bottom:0;background:rgba(163,45,45,.08);border-radius:4px}
+.gex-pin{position:absolute;top:0;bottom:0;width:3px;border-radius:2px}
+.gex-lb{position:absolute;bottom:-22px;font-size:10px;transform:translateX(-50%);white-space:nowrap}
+.gex-lt{position:absolute;top:-20px;font-size:10px;transform:translateX(-50%);white-space:nowrap}
+.leg-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.leg-i{display:flex;align-items:center;gap:5px;font-size:11px;color:#888780}
+.leg-sw{width:10px;height:10px;border-radius:2px}
+.ac{padding:13px 15px;background:#f1efe8;border-radius:10px;border:1px solid #d3d1c7}
+.act{font-size:12px;font-weight:600;margin-bottom:6px}
+.acb{font-size:12px;color:#5f5e5a;line-height:1.55}
+.verdict{border-radius:12px;padding:15px 18px;margin-top:18px;border:1px solid #ef9f27;background:#faeeda}
+.vt{font-size:14px;font-weight:700;color:#633806;margin-bottom:8px}
+.vb{font-size:13px;color:#1a1a18;line-height:1.65}
+.tt{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0}
+.tt th{font-size:10px;color:#5f5e5a;text-align:left;padding:6px 8px;border-bottom:1px solid #d3d1c7;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tt td{padding:8px 8px;border-bottom:1px solid #e8e6e0;color:#1a1a18;vertical-align:middle}
+.tt tr:last-child td{border-bottom:none}
+.tt tr.active-row td{background:#faeeda}
+.divider{height:1px;background:#d3d1c7;margin:18px 0}
+.err-banner{background:#fcebeb;border:1px solid #f09595;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#791f1f;line-height:1.6}
+@media(max-width:700px){.g4{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}.gn{min-width:120px;font-size:12px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="setup-banner" id="setup-banner">
+  <div>
+    <div class="setup-label">FRED API Key Required for Live Data</div>
+    <input class="setup-input" id="api-key-input" type="password" placeholder="Paste your 32-character FRED API key here…" autocomplete="off">
+    <button class="setup-btn" onclick="saveKey()">Connect &amp; Load Live Data</button>
+    <div class="setup-hint">
+      Free key (takes 30 sec): <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank">fred.stlouisfed.org/docs/api/api_key.html</a>
+      &nbsp;·&nbsp; Key is stored in this browser only, only sent directly to FRED.
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <div class="title">Live Market Intelligence Dashboard</div>
+    <div class="sub">SPY PMCC + macro stress signals · Auto-refreshes every 5 min from FRED</div>
+  </div>
+  <div class="hdr-right">
+    <span class="live-dot loading" id="live-dot"></span><span id="live-status">Waiting for API key…</span><br>
+    Last updated: <span id="last-updated">—</span><br>
+    Next refresh: <span id="next-refresh">—</span>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="si loading" id="s-vix">● VIX —</div>
+  <div class="si loading" id="s-hy">● HY OAS —</div>
+  <div class="si loading" id="s-ig">● IG BBB —</div>
+  <div class="si loading" id="s-bb">● BB OAS —</div>
+  <div class="si loading" id="s-10y">● 10-yr —</div>
+  <div class="si loading" id="s-sahm">● Sahm —</div>
+  <button class="refresh-btn" onclick="fetchAll()">↻ Refresh now</button>
+</div>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="showTab('overview',event)">Signal Board</div>
+  <div class="tab" onclick="showTab('credit',event)">Credit Spreads</div>
+  <div class="tab" onclick="showTab('gex',event)">GEX &amp; P/C</div>
+  <div class="tab" onclick="showTab('thresholds',event)">Thresholds</div>
+  <div class="tab" onclick="showTab('analysis',event)">PMCC Analysis</div>
+</div>
+
+<!-- SIGNAL BOARD -->
+<div class="panel active" id="panel-overview">
+  <div class="g4">
+    <div class="kpi"><div class="kpi-lbl">VIX — equity fear</div><div class="kpi-val gray" id="v-vix">—</div><div class="kpi-d gray" id="d-vix">Loading…</div><div class="kpi-sub">CBOE 30-day implied vol</div><div class="kpi-src">FRED · VIXCLS · daily</div></div>
+    <div class="kpi"><div class="kpi-lbl">HY OAS — junk spread</div><div class="kpi-val gray" id="v-hy">—</div><div class="kpi-d gray" id="d-hy">Loading…</div><div class="kpi-sub">ICE BofA all HY (BB and below)</div><div class="kpi-src">FRED · BAMLH0A0HYM2 · daily</div></div>
+    <div class="kpi"><div class="kpi-lbl">IG BBB OAS</div><div class="kpi-val gray" id="v-ig">—</div><div class="kpi-d gray" id="d-ig">Loading…</div><div class="kpi-sub">Investment grade corporate spread</div><div class="kpi-src">FRED · BAMLC0A4CBBB · daily</div></div>
+    <div class="kpi"><div class="kpi-lbl">10-yr Treasury yield</div><div class="kpi-val gray" id="v-10y">—</div><div class="kpi-d gray" id="d-10y">Loading…</div><div class="kpi-sub">Rising = equity headwind</div><div class="kpi-src">FRED · DGS10 · daily</div></div>
+  </div>
+  <div class="g4">
+    <div class="kpi"><div class="kpi-lbl">BB OAS — best junk tranche</div><div class="kpi-val gray" id="v-bb">—</div><div class="kpi-d gray" id="d-bb">Loading…</div><div class="kpi-sub">Canary for IG downgrade risk</div><div class="kpi-src">FRED · BAMLH0A1HYBB · daily</div></div>
+    <div class="kpi"><div class="kpi-lbl">Sahm Rule indicator</div><div class="kpi-val gray" id="v-sahm">—</div><div class="kpi-d gray" id="d-sahm">Loading…</div><div class="kpi-sub">Triggers recession signal at 0.50+</div><div class="kpi-src">FRED · SAHMREALTIME · monthly</div></div>
+    <div class="kpi"><div class="kpi-lbl">GEX regime</div><div class="kpi-val red">Negative</div><div class="kpi-d red">Since Feb 26 flip</div><div class="kpi-sub">Vol Trigger ~6,750 SPX · manual</div><div class="kpi-src">SpotGamma · update manually</div></div>
+    <div class="kpi"><div class="kpi-lbl">SPX put/call ratio</div><div class="kpi-val red">1.23</div><div class="kpi-d red">Elevated institutional hedging</div><div class="kpi-sub">Equity P/C: 0.56 · divergence</div><div class="kpi-src">CBOE · Mar 26 · update manually</div></div>
+  </div>
+  <div class="cl cl-a" id="overview-callout">Connecting to FRED… live readings will appear shortly.</div>
+</div>
+
+<!-- CREDIT SPREADS -->
+<div class="panel" id="panel-credit">
+  <div class="sec-title">Credit spread ladder — live from FRED</div>
+  <div class="gr"><div class="gn">IG (BBB) OAS — investment grade</div><div class="gt"><div class="gf" id="gf-ig" style="width:0%;background:#3b6d11"></div></div><div class="gv" id="gv-ig"><span class="gray">—</span></div></div>
+  <div class="gr"><div class="gn">HY (BB) OAS — best junk</div><div class="gt"><div class="gf" id="gf-bb" style="width:0%;background:#854f0b"></div></div><div class="gv" id="gv-bb"><span class="gray">—</span></div></div>
+  <div class="gr"><div class="gn">HY (all) OAS — broad junk</div><div class="gt"><div class="gf" id="gf-hy" style="width:0%;background:#854f0b"></div></div><div class="gv" id="gv-hy"><span class="gray">—</span></div></div>
+  <div class="gr"><div class="gn" style="color:#a32d2d">Danger threshold</div><div class="gt"><div class="gf" style="width:45%;background:#a32d2d;opacity:.35"></div></div><div class="gv" style="color:#888780">450bps — watch level</div></div>
+  <div class="gr"><div class="gn" style="color:#b4b2a9">2008 GFC peak</div><div class="gt"><div class="gf" style="width:100%;background:#a32d2d;opacity:.15"></div></div><div class="gv" style="color:#b4b2a9">2,182bps max</div></div>
+  <div class="divider"></div>
+  <div class="g2">
+    <div class="ac"><div class="act green">IG tight — no systemic crack</div><div class="acb">BBB OAS near multi-decade lows. Institutional money is NOT pricing in systemic risk. IG leads at turning points — watch for break above 120bps as the first real alarm bell.</div></div>
+    <div class="ac"><div class="act amber">HY widening — direction matters</div><div class="acb">The trend from ~2.84% (Feb 11) to current is the signal. Historical thresholds: below 4% manageable, 4–5% elevated headwind, 5%+ meaningful recession risk. BB tranche is the canary — above 250bps expect IG to follow.</div></div>
+  </div>
+  <div class="cl cl-b" id="credit-callout">Live spread data loading from FRED…</div>
+</div>
+
+<!-- GEX & P/C -->
+<div class="panel" id="panel-gex">
+  <div class="sec-title">Put/Call ratio — institutional vs retail divergence</div>
+  <div class="g2">
+    <div class="kpi"><div class="kpi-lbl">SPX index put/call</div><div class="kpi-val red">1.23</div><div class="kpi-sub" style="margin-top:8px;font-size:13px;line-height:1.6">Institutions buying index downside aggressively. 1.1+ historically marks troughs but capitulation needs 1.5+. "Bearish but not done" zone.</div><div class="kpi-src">CBOE · Mar 26 · manual update</div></div>
+    <div class="kpi"><div class="kpi-lbl">Equity put/call</div><div class="kpi-val amber">0.56</div><div class="kpi-sub" style="margin-top:8px;font-size:13px;line-height:1.6">Retail still buying more calls than puts on individual stocks. Markets typically bottom when retail capitulates — not when institutions hedge. This divergence is bearish near-term.</div><div class="kpi-src">CBOE · Mar 27 · manual update</div></div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec-title">GEX structure — dealer gamma map (manual update)</div>
+  <div class="gex-map">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:12px;color:#5f5e5a">SPX gamma wall map</span>
+      <span style="font-size:12px;font-weight:700;color:#a32d2d">SPX ~6,368 — BELOW zero gamma · amplified vol regime</span>
+    </div>
+    <div class="gex-track">
+      <div class="gex-line"></div>
+      <div class="gex-zone"></div>
+      <div class="gex-pin" style="left:0%;background:#a32d2d"><div class="gex-lb" style="color:#a32d2d;font-weight:700">6,000 · Put wall</div></div>
+      <div class="gex-pin" style="left:14%;background:#a32d2d;opacity:.6"><div class="gex-lb" style="color:#888780">6,100</div></div>
+      <div class="gex-pin" style="left:33%;background:#a32d2d"><div class="gex-lb" style="color:#a32d2d;font-weight:700">6,368 ← you</div></div>
+      <div class="gex-pin" style="left:61%;background:#854f0b"><div class="gex-lt" style="color:#854f0b;font-weight:700">~6,750 · Zero Gamma</div></div>
+      <div class="gex-pin" style="left:77%;background:#3b6d11;opacity:.8"><div class="gex-lb" style="color:#888780">6,900</div></div>
+      <div class="gex-pin" style="right:0%;background:#3b6d11"><div class="gex-lb" style="color:#3b6d11;font-weight:700">7,000 · Call wall</div></div>
+    </div>
+    <div class="leg-row" style="margin-top:40px">
+      <div class="leg-i"><div class="leg-sw" style="background:rgba(163,45,45,.2)"></div>Negative gamma zone</div>
+      <div class="leg-i"><div class="leg-sw" style="background:#854f0b"></div>Zero Gamma / Vol Trigger</div>
+      <div class="leg-i"><div class="leg-sw" style="background:#3b6d11"></div>Call walls</div>
+    </div>
+  </div>
+  <div class="cl cl-a">GEX flip trigger: SPX must reclaim ~6,750 and hold 2 consecutive sessions. Until then every rally faces dealer selling at call walls and every dip gets mechanically amplified.</div>
+</div>
+
+<!-- THRESHOLDS -->
+<div class="panel" id="panel-thresholds">
+  <div class="sec-title">VIX threshold table — PMCC short call positioning</div>
+  <table class="tt">
+    <thead><tr><th>VIX level</th><th>Market signal</th><th>Short call target</th><th>Hedge</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 15</td><td>Complacent · positive GEX</td><td>3–4% OTM · 30 DTE</td><td>Optional</td><td><span class="badge bg">Clear</span></td></tr>
+      <tr><td>15–20</td><td>Normal</td><td>4–5% OTM · 21–30 DTE</td><td>Light</td><td><span class="badge bg">Clear</span></td></tr>
+      <tr><td>20–30</td><td>Elevated · likely neg. GEX</td><td>5–7% OTM · 21 DTE</td><td>Debit spread</td><td id="tv20"><span class="badge bg">Clear</span></td></tr>
+      <tr><td>30–40</td><td>Fear · neg. GEX confirmed</td><td>7–9% OTM · 14 DTE</td><td>Active spread required</td><td id="tv30"><span class="badge bg">Clear</span></td></tr>
+      <tr><td>&gt; 40</td><td>Panic · bottom forming</td><td>Close short · add LEAPS</td><td>Buy aggressively</td><td><span class="badge bg">Clear</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec-title" style="margin-top:18px">HY OAS threshold table — credit stress signal</div>
+  <table class="tt">
+    <thead><tr><th>HY OAS</th><th>Signal</th><th>PMCC action</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 3.0%</td><td>Complacency · risk-on</td><td>Tighten strikes, extend duration</td><td><span class="badge bg">Clear</span></td></tr>
+      <tr><td>3.0–3.5%</td><td>Slight caution</td><td>Watch trend direction</td><td id="th30"><span class="badge bg">Clear</span></td></tr>
+      <tr><td>3.5–4.5%</td><td>Elevated stress</td><td>Wide short call · debit spread hedge</td><td id="th35"><span class="badge bg">Clear</span></td></tr>
+      <tr><td>4.5–6.0%</td><td>Danger zone</td><td>Reduce contracts · aggressive hedge</td><td><span class="badge bg">Clear</span></td></tr>
+      <tr><td>&gt; 6.0%</td><td>Crisis · recession</td><td>Restructure or exit PMCC</td><td><span class="badge bg">Clear</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec-title" style="margin-top:18px">Sahm Rule threshold</div>
+  <table class="tt">
+    <thead><tr><th>Sahm value</th><th>Signal</th><th>Action</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 0.30</td><td>No recession signal</td><td>Normal PMCC operation</td><td id="ts0"><span class="badge bg">Clear</span></td></tr>
+      <tr><td>0.30–0.50</td><td>Warning zone</td><td>Reduce contracts · tighten hedge</td><td id="ts30"><span class="badge bg">Clear</span></td></tr>
+      <tr><td>&gt; 0.50</td><td>Recession triggered</td><td>Restructure — recession playbook</td><td><span class="badge bg">Clear</span></td></tr>
+    </tbody>
+  </table>
+  <div class="cl cl-b" id="thresh-callout" style="margin-top:14px">Live data loading — threshold status will update once connected.</div>
+</div>
+
+<!-- ANALYSIS -->
+<div class="panel" id="panel-analysis">
+  <div class="sec-title">Integrated signal analysis for your SPY PMCC</div>
+  <div class="sr"><div class="sd r"></div><div><div class="st">VIX elevated — short call should be 7–9% OTM, 14 DTE</div><div class="sb">With VIX above 30, IV is elevated and GEX is negative. Bear rallies of 2–3% can occur overnight in negative gamma territory. Wide strikes protect against gap-through risk. Short duration (14 DTE) limits your exposure window to any single catalyst. Never hold a short call through a major macro event in this environment.</div></div></div>
+  <div class="sr"><div class="sd a"></div><div><div class="st">HY OAS widening — debit put spread beats naked put</div><div class="sb">A debit put spread (buy SPX 4–5% OTM, sell 200pts lower) costs ~$1,700/cycle vs $7,500 for a naked put — a 77% cost reduction. In the likely flat-to-moderate-down scenario, the spread saves $5,800/cycle while still covering the 4–8% correction range your PMCC is most exposed to. Naked put only wins if SPX crashes more than 250pts below your long strike.</div></div></div>
+  <div class="sr"><div class="sd r"></div><div><div class="st">Negative GEX — do not chase bear rallies</div><div class="sb">Every rally in negative gamma territory stalls at call walls (6,900 / 7,000 SPX). Do not roll your short call up on day 1 of any rally — wait 2 sessions to confirm whether the move holds above Zero Gamma (~6,750 SPX / ~$675 SPY). If it doesn't hold, the short call returns to safe distance naturally.</div></div></div>
+  <div class="sr"><div class="sd g"></div><div><div class="st">IG spreads still tight — correction, not recession confirmed</div><div class="sb">Investment grade at multi-decade tights is the single most important structural green light. Your LEAPS retains structural value. A true recession drawdown requires IG to break above 120bps AND payrolls to go negative. Neither has triggered. The PMCC structure itself is sound — you're managing risk inside a correction, not restructuring for a multi-year bear market.</div></div></div>
+  <div class="verdict"><div class="vt" id="verdict-title">Loading live assessment…</div><div class="vb" id="verdict-body">Fetching FRED data to generate integrated analysis…</div></div>
+  <div class="divider"></div>
+  <div class="sec-title">Flip-back checklist — when to normalise your PMCC</div>
+  <div class="sr"><div class="sd g"></div><div><div class="st">Signal 1: HY OAS drops back below 3.00%</div><div class="sb">Credit stress easing. Begin tightening short call strikes toward 4–5% OTM and extending duration toward 21–30 DTE.</div></div></div>
+  <div class="sr"><div class="sd g"></div><div><div class="st">Signal 2: VIX closes below 20 for 2+ sessions</div><div class="sb">Volatility regime normalising. Harvest remaining short call premium early before IV crush, re-sell at normalised strikes.</div></div></div>
+  <div class="sr"><div class="sd g"></div><div><div class="st">Signal 3: SPX reclaims ~6,750 for 2 consecutive sessions</div><div class="sb">GEX flips back positive. Dealer flows become stabilising. Rallies become trustworthy. Close or reduce put spread hedge. Extend duration.</div></div></div>
+</div>
+
+</div>
+<script>
+const FRED='https://api.stlouisfed.org/fred/series/observations';
+const SER={
+  vix: {id:'VIXCLS',        lbl:'VIX',    unit:'',  dp:2, dH:30,  wH:20 },
+  hy:  {id:'BAMLH0A0HYM2', lbl:'HY OAS', unit:'%', dp:2, dH:4.5, wH:3.5},
+  ig:  {id:'BAMLC0A4CBBB', lbl:'IG BBB', unit:'%', dp:2, dH:1.2, wH:1.0},
+  bb:  {id:'BAMLH0A1HYBB', lbl:'BB OAS', unit:'%', dp:2, dH:2.5, wH:2.0},
+  t10y:{id:'DGS10',         lbl:'10-yr',  unit:'%', dp:2, dH:5.0, wH:4.5},
+  sahm:{id:'SAHMREALTIME',  lbl:'Sahm',   unit:'',  dp:2, dH:0.5, wH:0.3},
+};
+const SID={vix:'s-vix',hy:'s-hy',ig:'s-ig',bb:'s-bb',t10y:'s-10y',sahm:'s-sahm'};
+let apiKey=localStorage.getItem('fred_key')||'';
+let data={};
+let timer=null;
+let cd=300;
+
+function saveKey(){
+  const k=document.getElementById('api-key-input').value.trim();
+  if(!k||k.length<10){alert('Please paste your full FRED API key (32 characters, no spaces).');return;}
+  apiKey=k;
+  localStorage.setItem('fred_key',k);
+  document.getElementById('setup-banner').classList.add('hidden');
+  fetchAll();
+}
+
+function fredJSONP(seriesId){
+  return new Promise((res,rej)=>{
+    const cb='_fred_'+seriesId.replace(/\W/g,'_')+'_'+Date.now();
+    const t=setTimeout(()=>{cleanup();rej(new Error('Timeout after 12s'));},12000);
+    function cleanup(){clearTimeout(t);delete window[cb];const s=document.getElementById('s_'+cb);if(s)s.remove();}
+    window[cb]=function(d){
+      cleanup();
+      if(d.error_message){rej(new Error(d.error_message));return;}
+      const obs=(d.observations||[]).filter(o=>o.value!='.'&&o.value!='');
+      if(!obs.length){rej(new Error('No observations returned'));return;}
+      res({value:parseFloat(obs[0].value),date:obs[0].date,prev:parseFloat(obs[1]?obs[1].value:obs[0].value)});
+    };
+    const sc=document.createElement('script');
+    sc.id='s_'+cb;
+    sc.onerror=()=>{cleanup();rej(new Error('Script blocked — check key or network'));};
+    sc.src=`${FRED}?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=5&callback=${cb}`;
+    document.head.appendChild(sc);
+  });
+}
+
+async function fetchAll(){
+  if(!apiKey){setStatus('err','API key needed');return;}
+  setStatus('loading','Fetching…');
+  const keys=Object.keys(SER);
+  const results=await Promise.allSettled(keys.map(k=>fredJSONP(SER[k].id)));
+  let ok=0;
+  results.forEach((r,i)=>{
+    const k=keys[i];
+    const cfg=SER[k];
+    const sel=document.getElementById(SID[k]);
+    if(r.status==='fulfilled'){
+      ok++;
+      data[k]=r.value;
+      paintKPI(k,r.value,cfg);
+      if(sel){sel.className='si ok';sel.textContent=`● ${cfg.lbl} ${r.value.value.toFixed(cfg.dp)}${cfg.unit}`;}
+    } else {
+      console.warn(cfg.id,r.reason?.message);
+      if(sel){sel.className='si err';sel.textContent=`● ${cfg.lbl} ERR`;}
+    }
+  });
+  if(!ok){
+    setStatus('err','All fetches failed');
+    showErr('Could not load FRED data. Possible causes: (1) Invalid API key — verify at fred.stlouisfed.org. (2) No internet connection. (3) FRED API temporarily down. Open browser console (F12) for details.');
+    return;
+  }
+  paintGauges();paintThresholds();paintVerdict();paintOverview();paintCredit();
+  document.getElementById('last-updated').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  setStatus('live',`Live · ${ok}/${keys.length} series`);
+  startCD();
+}
+
+function paintKPI(k,d,cfg){
+  const ve=document.getElementById('v-'+(k==='t10y'?'10y':k));
+  const de=document.getElementById('d-'+(k==='t10y'?'10y':k));
+  if(!ve)return;
+  const v=d.value,p=d.prev,ch=v-p,pct=p?ch/p*100:0;
+  ve.textContent=v.toFixed(cfg.dp)+cfg.unit;
+  const up=ch>=0;
+  const badForUp=['vix','hy','ig','bb','sahm'].includes(k);
+  const cc=v>=cfg.dH?'red':v>=cfg.wH?'amber':'green';
+  ve.className='kpi-val '+cc;
+  const dc=up?(badForUp?'red':'green'):(badForUp?'green':'red');
+  de.innerHTML=`<span class="${dc}">${up?'▲':'▼'} ${Math.abs(ch).toFixed(cfg.dp)}${cfg.unit} (${Math.abs(pct).toFixed(1)}%) from prev</span>`;
+}
+
+function paintGauges(){
+  [{k:'hy',max:22},{k:'bb',max:22},{k:'ig',max:5}].forEach(u=>{
+    if(!data[u.k])return;
+    const v=data[u.k].value;
+    const pct=Math.min(100,v/u.max*100);
+    const col=u.k==='ig'?(v>=1.2?'#a32d2d':v>=1.0?'#854f0b':'#3b6d11'):(v>=4.5?'#a32d2d':v>=3.5?'#854f0b':'#3b6d11');
+    const gf=document.getElementById('gf-'+u.k);
+    if(gf){gf.style.width=pct+'%';gf.style.background=col;}
+    const gv=document.getElementById('gv-'+u.k);
+    if(gv){
+      const b=u.k==='ig'?(v>=1.2?'<span class="badge br">Widening</span>':v>=1.0?'<span class="badge ba">Watching</span>':'<span class="badge bg">Tight</span>')
+               :(v>=4.5?'<span class="badge br">Danger</span>':v>=3.5?'<span class="badge ba">Elevated</span>':v>=3.0?'<span class="badge ba">Watching</span>':'<span class="badge bg">Normal</span>');
+      gv.innerHTML=v.toFixed(2)+'%&nbsp;'+b;
+    }
+  });
+}
+
+function paintThresholds(){
+  const v=data.vix?.value,h=data.hy?.value,s=data.sahm?.value;
+  if(v!==undefined){
+    const t20=document.getElementById('tv20');
+    const t30=document.getElementById('tv30');
+    if(t20)t20.innerHTML=v>=20&&v<30?'<span class="badge ba">ACTIVE NOW</span>':'<span class="badge bg">Clear</span>';
+    if(t30)t30.innerHTML=v>=30&&v<40?'<span class="badge br">ACTIVE NOW</span>':'<span class="badge bg">Clear</span>';
+  }
+  if(h!==undefined){
+    const th30=document.getElementById('th30');
+    const th35=document.getElementById('th35');
+    if(th30)th30.innerHTML=h>=3.0&&h<3.5?'<span class="badge ba">ACTIVE NOW</span>':'<span class="badge bg">Clear</span>';
+    if(th35)th35.innerHTML=h>=3.5&&h<4.5?'<span class="badge br">ACTIVE NOW</span>':'<span class="badge bg">Clear</span>';
+  }
+  if(s!==undefined){
+    const ts0=document.getElementById('ts0');
+    const ts30=document.getElementById('ts30');
+    if(ts0)ts0.innerHTML=s<0.30?'<span class="badge bg">ACTIVE NOW</span>':'<span class="badge bg">Clear</span>';
+    if(ts30)ts30.innerHTML=s>=0.30&&s<0.50?'<span class="badge ba">ACTIVE NOW</span>':'<span class="badge bg">Clear</span>';
+  }
+  const tc=document.getElementById('thresh-callout');
+  if(tc&&v!==undefined&&h!==undefined){
+    const alerts=[];
+    if(v>=30)alerts.push(`VIX ${v.toFixed(1)} — sell 7–9% OTM 14-DTE short calls · run debit spread hedge`);
+    if(h>=3.5)alerts.push(`HY OAS ${h.toFixed(2)}% — elevated credit stress · debit spread over naked put`);
+    if(s!==undefined&&s>=0.30)alerts.push(`Sahm Rule ${s.toFixed(2)} — recession warning zone · reduce contract size`);
+    tc.className='cl '+(alerts.length>=2?'cl-a':alerts.length?'cl-b':'cl-g');
+    tc.innerHTML=alerts.length?'<strong>Active alerts:</strong><br>'+alerts.map(a=>'● '+a).join('<br>'):'<strong>No threshold alerts triggered.</strong> All major indicators within normal ranges. Standard PMCC operation appropriate.';
+  }
+}
+
+function paintVerdict(){
+  const v=data.vix?.value,h=data.hy?.value,ig=data.ig?.value,s=data.sahm?.value;
+  if(!v||!h)return;
+  let stress=0;
+  if(v>=30)stress++;if(v>=40)stress++;
+  if(h>=3.5)stress++;if(h>=4.5)stress++;
+  if(ig&&ig>=1.2)stress++;
+  if(s&&s>=0.5)stress+=2;
+  const te=document.getElementById('verdict-title');
+  const be=document.getElementById('verdict-body');
+  if(stress>=4){
+    te.textContent='HIGH STRESS — Restructure PMCC, aggressive hedge required';te.style.color='#791f1f';
+    be.textContent=`Multiple stress indicators active. VIX ${v.toFixed(1)}, HY OAS ${h.toFixed(2)}%. Maximum short call width (8–10% OTM), minimum DTE (7–14 days), debit spread hedge active, consider reducing contract count 30–50%. Monitor daily for recession confirmation.`;
+  } else if(stress>=2){
+    te.textContent='ELEVATED STRESS — Active risk management required';te.style.color='#633806';
+    be.innerHTML=`VIX ${v.toFixed(1)} and HY OAS ${h.toFixed(2)}% confirm negative GEX, elevated-credit-risk environment. Sell <strong>7–9% OTM SPY calls at 14 DTE</strong>. Hedge with <strong>SPX debit put spread: buy 4–5% OTM, sell 200pts lower (~$1,700/cycle)</strong>. IG BBB at ${ig?.toFixed(2)||'—'}% — no systemic crack yet. Maintain position but hedge actively.`;
+  } else if(stress>=1){
+    te.textContent='MILD STRESS — Standard PMCC with light hedging';te.style.color='#0c447c';
+    be.textContent=`Modest stress signals. Sell 5–7% OTM calls at 21 DTE. Consider a put spread for tail protection. Monitor HY OAS and VIX trend direction — trajectory matters more than absolute level.`;
+  } else {
+    te.textContent='LOW STRESS — Favourable PMCC environment';te.style.color='#27500a';
+    be.textContent=`All major indicators within normal ranges. Ideal PMCC environment. Sell 3–5% OTM calls at 21–30 DTE. Hedge optional — if you run one, a cheap 10% OTM put is sufficient. Focus on maximising premium income.`;
+  }
+}
+
+function paintOverview(){
+  const el=document.getElementById('overview-callout');
+  const v=data.vix?.value,h=data.hy?.value,ig=data.ig?.value;
+  if(!v||!h)return;
+  const n=[v>=30,h>=3.5,ig&&ig>=1.2].filter(Boolean).length;
+  el.className='cl '+(n>=2?'cl-a':n?'cl-b':'cl-g');
+  el.innerHTML=`<strong>Live read:</strong> VIX ${v.toFixed(1)} · HY OAS ${h.toFixed(2)}% · IG BBB ${ig?.toFixed(2)||'—'}% · Sahm ${data.sahm?.value?.toFixed(2)||'—'}. `+(n>=2?'Multiple stress signals active — elevated caution for PMCC short leg.':n?'Mild stress signal. Monitor trend direction closely.':'No major stress signals. Favourable environment.');
+}
+
+function paintCredit(){
+  const el=document.getElementById('credit-callout');
+  const h=data.hy?.value,b=data.bb?.value,ig=data.ig?.value;
+  if(!h)return;
+  const bpsToDanger=Math.max(0,4.5-h);
+  const wks=h>3.2?Math.round(bpsToDanger/0.06):null;
+  el.className='cl '+(h>=4.0?'cl-r':h>=3.5?'cl-a':'cl-b');
+  el.innerHTML=`HY OAS <strong>${h.toFixed(2)}%</strong> · BB ${b?.toFixed(2)||'—'}% · IG BBB ${ig?.toFixed(2)||'—'}%. `+(wks?`At current widening pace, HY hits 4.5% danger threshold in ~<strong>${wks} weeks</strong>. `:'')+`IG below 1.2% = no systemic institutional credit event priced in yet. Key: if IG breaks 1.2%, the correction becomes a credit event.`;
+}
+
+function setStatus(type,text){
+  const d=document.getElementById('live-dot'),s=document.getElementById('live-status');
+  d.className='live-dot'+(type==='err'?' err':type==='loading'?' loading':'');
+  s.textContent=text;
+}
+
+function startCD(){
+  if(timer)clearInterval(timer);
+  cd=300;
+  timer=setInterval(()=>{
+    cd--;
+    const m=Math.floor(cd/60),s=cd%60;
+    document.getElementById('next-refresh').textContent=m+':'+(s<10?'0':'')+s;
+    if(cd<=0){clearInterval(timer);fetchAll();}
+  },1000);
+}
+
+function showErr(msg){
+  let el=document.getElementById('err-banner');
+  if(!el){el=document.createElement('div');el.id='err-banner';el.className='err-banner';document.querySelector('.tab-bar').before(el);}
+  el.innerHTML=`<strong>Error:</strong> ${msg} <button onclick="this.parentElement.remove()" style="margin-left:10px;padding:2px 10px;border:1px solid #f09595;border-radius:6px;cursor:pointer;background:transparent;color:#791f1f;font-size:12px">✕</button>`;
+}
+
+function showTab(id,e){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  e.target.classList.add('active');
+}
+
+// Init
+if(apiKey){document.getElementById('api-key-input').value=apiKey;document.getElementById('setup-banner').classList.add('hidden');fetchAll();}
+else{setStatus('err','API key needed');}
+</script>
+</body>
+</html>
